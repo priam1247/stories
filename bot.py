@@ -74,7 +74,7 @@ WIKI_TOPICS = {
         "Glaucus atlanticus", "Portuguese man o war", "Bobbit worm",
         "Draco lizard", "Flying snake", "Thorny dragon",
         "Frill-necked lizard", "Basilisk lizard", "Matamata",
-        "Star-nosed mole", "Platypus", "Echidna", "Narwhal",
+        "Star-nosed mole", "Echidna", "Narwhal",
         "Beluga whale", "Orca", "Sperm whale", "Blue whale",
     ],
     "crazy_humans": [
@@ -256,7 +256,7 @@ def ask_groq(prompt):
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 500,
+        "max_tokens": 800,
         "temperature": 0.9,
     }
     for attempt in range(3):
@@ -359,32 +359,35 @@ def write_fact_post(category, topic, wiki_data):
     info    = CATEGORY_INFO[category]
     emoji   = info["emoji"]
     starter = random.choice(STARTERS)
-    summary = wiki_data["summary"][:800]
+    summary = wiki_data["summary"][:1200]
 
-    prompt = f"""You write Facebook posts for a page called "They Never Told Us".
-Your audience is mostly African people. Use VERY simple English. Short sentences. Easy words. Maximum 15 words per sentence.
+    prompt = f"""You are a master storyteller who writes for a Facebook page called "They Never Told Us". Your audience is mostly African people who love shocking, real stories. You write like a wise friend sitting next to someone and whispering the most unbelievable truth they have ever heard.
 
 Topic: {topic}
 Real facts to use: {summary}
 
-Write a single Facebook post as plain flowing text. No titles. No headings. No numbers. No labels. No sections. Just the post text itself.
+Write a Facebook post that reads like a short gripping story. It must flow naturally from one sentence to the next like someone talking. Do NOT write bullet points. Do NOT write a list. Do NOT write separate disconnected lines. Write it as one connected story that pulls the reader deeper with every sentence.
 
-Start with "{starter}" then write the single most shocking fact about {topic}. Add {emoji} emoji on this first line.
+Here is exactly how to write it:
 
-Then write 5 to 6 short sentences about {topic}. Each sentence maximum 15 words. Simple English a 12 year old understands. Add emojis like 🔥😱💀🌊🧠⚡ on each line. Tell it like a story and build up the shock. Use ONLY real facts from the text above.
+Open with "{starter}" and immediately hit them with the most shocking fact about {topic}. Add {emoji} here. Make it impossible to stop reading.
 
-Then write one emotional sentence to close. Make the reader feel amazed or shocked. End with 🙏 or 😱 or 🤯
+Then tell the story. Explain what {topic} is, why it is so shocking, what it does or what happened, how it affects people or the world, and why most people do not know about it. Write this as a flowing story with natural connections between sentences. Use words like "but", "and then", "what makes this worse", "here is the part nobody tells you", "the crazy thing is", "and if that was not enough" to keep the story moving. Each sentence should make the reader want to read the next one.
+
+Then end with one powerful sentence that makes the reader feel something — amazed, scared, grateful or shocked. No emoji here. Just a strong sentence.
 
 Then on a new line write exactly this:
 🔔 Follow They Never Told Us — we post the craziest facts every single day.
 Tag a friend who needs to see this 👇
 
-Rules:
-- Maximum 200 words total
-- NO titles, NO headings, NO numbers, NO labels anywhere in the post
-- No complex words
-- No long sentences
-- ONLY use facts from the real facts given above — do NOT invent anything
+Strict rules:
+- Write between 180 and 250 words total
+- Use simple English that anyone can understand
+- Only use 2 or 3 emojis in the whole post — only where they feel natural, not on every line
+- No bullet points, no lists, no dashes, no numbered lines
+- No titles or section headings anywhere
+- Every sentence must connect to the next one like a story
+- Only use facts from the real facts given above — do not invent anything
 """
     result = ask_groq(prompt)
     if result:
@@ -394,30 +397,34 @@ Rules:
 # ── Write news post with Groq ─────────────────────────────────────
 def write_news_post(title, desc):
     starter = random.choice(STARTERS)
-    prompt = f"""You write Facebook posts for a page called "They Never Told Us".
-Your audience is mostly African people. Use VERY simple English. Short sentences. Easy words. Maximum 15 words per sentence.
+
+    prompt = f"""You are a master storyteller who writes for a Facebook page called "They Never Told Us". Your audience is mostly African people. You write like a smart friend explaining the news in the most engaging, clear and human way possible.
 
 Real news headline: {title}
 Real news details: {desc}
 
-Write a single Facebook post as plain flowing text. No titles. No headings. No numbers. No labels. No sections. Just the post text itself.
+Write a Facebook post that reads like a short gripping story. It must flow naturally from one sentence to the next like someone talking to a friend. Do NOT write bullet points. Do NOT write a list. Do NOT write separate disconnected lines. Write it as one connected story.
 
-Start with "{starter}" then write the most important point of this news. Add 🌍 emoji on this first line.
+Here is exactly how to write it:
 
-Then write 5 short sentences explaining what is happening. Each sentence maximum 15 words. Very simple English like explaining to a friend. Explain why this matters for Africa and ordinary people. Add emojis on each line 🌍😱💰⚡🔥
+Open with "{starter}" and immediately hit them with the most important and shocking part of this news. Add 🌍 here. Make it impossible to stop reading.
 
-Then write one sentence about what might happen next. End with 😳 or 🤔 or 💭
+Then tell the full story. Explain what happened, why it matters, who is affected, what caused it, and what it means for Africa and ordinary people around the world. Write this as a flowing story with natural connections between sentences. Use words like "but", "and then", "what makes this worse", "here is what nobody is saying", "the real problem is", "and if that was not enough" to keep the story moving.
+
+Then end with one powerful sentence about what might happen next or why this matters. No emoji here. Just a strong sentence.
 
 Then on a new line write exactly this:
 🔔 Follow They Never Told Us — we explain world news in simple English every single day.
 Tag someone who needs to understand what is happening 👇
 
-Rules:
-- Maximum 200 words total
-- NO titles, NO headings, NO numbers, NO labels anywhere in the post
-- No complex words
-- No long sentences
-- ONLY use facts from the headline and details above
+Strict rules:
+- Write between 180 and 250 words total
+- Use simple English that anyone can understand
+- Only use 2 or 3 emojis in the whole post — only where they feel natural, not on every line
+- No bullet points, no lists, no dashes, no numbered lines
+- No titles or section headings anywhere
+- Every sentence must connect to the next one like a story
+- Only use facts from the headline and details above — do not invent anything
 """
     result = ask_groq(prompt)
     if result:
@@ -500,7 +507,7 @@ def run():
     log("=" * 50)
     log(f"Categories : {', '.join(CATEGORY_INFO[c]['name'] for c in CATEGORIES)}")
     log("Sources    : Wikipedia (with real photos) + BBC RSS")
-    log("Writing    : Groq AI (llama-3.3-70b) — simple English for African audience")
+    log("Writing    : Groq AI (llama-3.3-70b) — story style for African audience")
     log("Images     : Wikipedia original photos")
     log("Interval   : Every 30 minutes")
     log("No repeats : 30 day cooldown per topic")
