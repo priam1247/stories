@@ -15,20 +15,26 @@ def log(msg):
     print(msg)
     logging.info(msg)
 
-FB_TOKEN   = os.getenv("FB_TOKEN")
-FB_PAGE_ID = os.getenv("FB_PAGE_ID")
-GROQ_KEY   = os.getenv("GROQ_KEY")
+FB_TOKEN      = os.getenv("FB_TOKEN")
+FB_PAGE_ID    = os.getenv("FB_PAGE_ID")
+GROQ_KEY      = os.getenv("GROQ_KEY")
+PEXELS_KEY    = os.getenv("PEXELS_KEY")
 
-for var, val in [("FB_TOKEN", FB_TOKEN), ("FB_PAGE_ID", FB_PAGE_ID), ("GROQ_KEY", GROQ_KEY)]:
+for var, val in [
+    ("FB_TOKEN",    FB_TOKEN),
+    ("FB_PAGE_ID",  FB_PAGE_ID),
+    ("GROQ_KEY",    GROQ_KEY),
+    ("PEXELS_KEY",  PEXELS_KEY),
+]:
     if not val:
         raise SystemExit(f"[ERROR] Missing environment variable: {var}")
 
-FB_POST_URL  = f"https://graph.facebook.com/{FB_PAGE_ID}/feed"
-FB_PHOTO_URL = f"https://graph.facebook.com/{FB_PAGE_ID}/photos"
-GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions"
-STATE_FILE   = "state.json"
-PAGE_NAME    = "They Never Told Us"
-POST_INTERVAL = 1800  # 30 minutes
+FB_POST_URL   = f"https://graph.facebook.com/{FB_PAGE_ID}/feed"
+FB_PHOTO_URL  = f"https://graph.facebook.com/{FB_PAGE_ID}/photos"
+GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions"
+PEXELS_URL    = "https://api.pexels.com/v1/search"
+STATE_FILE    = "state.json"
+POST_INTERVAL = 3600  # 1 hour
 
 # ── Categories ────────────────────────────────────────────────────
 CATEGORIES = [
@@ -49,153 +55,264 @@ CATEGORY_INFO = {
     "shocking_facts": {"name": "Shocking Facts",   "emoji": "🤯"},
 }
 
-# ── Wikipedia topics per category ─────────────────────────────────
+PEXELS_CATEGORY_FALLBACK = {
+    "animals_nature": "wild animal nature",
+    "crazy_humans":   "human crowd people",
+    "dark_history":   "dark history war",
+    "ocean_space":    "ocean space stars",
+    "world_news":     "world news globe",
+    "shocking_facts": "science discovery",
+}
+
+# ── FRESH Wikipedia topics — completely new, never posted ─────────
 WIKI_TOPICS = {
     "animals_nature": [
-        "Mantis shrimp", "Pistol shrimp", "Tardigrade", "Mimic octopus",
-        "Bombardier beetle", "Platypus", "Goblin shark", "Archerfish",
-        "Immortal jellyfish", "Axolotl", "Komodo dragon", "Cassowary",
-        "Blue-ringed octopus", "Cone snail", "Irukandji jellyfish",
-        "Hippopotamus", "Saltwater crocodile", "Inland taipan",
-        "Box jellyfish", "Stonefish", "Venus flytrap", "Rafflesia",
-        "Corpse flower", "Baobab tree", "Dragon blood tree",
-        "Great white shark", "Black mamba", "Electric eel",
-        "Honey badger", "Wolverine", "Tasmanian devil",
-        "Aye-aye", "Naked mole rat", "Blobfish", "Anglerfish",
-        "Vampire squid", "Giant squid", "Colossal squid",
-        "Dung beetle", "Army ant", "Bullet ant", "Africanized bee",
-        "Coconut crab", "Goliath birdeater", "Titan beetle",
-        "Moose", "Capybara", "Pangolin", "Okapi", "Saiga antelope",
-        "Shoebill", "Harpy eagle", "Andean condor", "Secretary bird",
-        "Fossa", "Quokka", "Ocean sunfish", "Leafy sea dragon",
-        "Pufferfish", "Hagfish", "Lamprey", "Piranha", "Arapaima",
-        "Giant river otter", "Slow loris", "Tarsier", "Proboscis monkey",
-        "Mandrill", "Geoduck", "Horseshoe crab", "Velvet worm",
-        "Glaucus atlanticus", "Portuguese man o war", "Bobbit worm",
-        "Draco lizard", "Flying snake", "Thorny dragon",
-        "Frill-necked lizard", "Basilisk lizard", "Matamata",
-        "Star-nosed mole", "Echidna", "Narwhal",
-        "Beluga whale", "Orca", "Sperm whale", "Blue whale",
+        "Lyrebird", "Kakapo", "Frogfish", "Stonefish",
+        "Mimic octopus", "Sea cucumber", "Crown-of-thorns starfish",
+        "Mantis shrimp", "Snapping shrimp", "Giant clam",
+        "Whale shark", "Basking shark", "Greenland shark",
+        "Oarfish", "Frilled shark", "Goblin shark",
+        "Dumbo octopus", "Firefly squid", "Japanese spider crab",
+        "Yeti crab", "Flamingo", "Shoebill stork",
+        "Marabou stork", "Sword-billed hummingbird",
+        "Potoo", "Frogmouth", "Hoatzin", "Hoopoe",
+        "Bowerbird", "Birds-of-paradise",
+        "Wolverine", "Sun bear", "Binturong",
+        "Clouded leopard", "Serval", "Caracal",
+        "Maned wolf", "Bush dog", "African wild dog",
+        "Aardvark", "Aardwolf", "Zorilla",
+        "Pygmy hippo", "Forest elephant", "Pygmy elephant",
+        "Irrawaddy dolphin", "Amazon river dolphin", "Vaquita",
+        "Sea otter", "Giant otter", "Walrus",
+        "Ribbon seal", "Leopard seal", "Weddell seal",
+        "Quoll", "Numbat", "Thylacine",
+        "Glass frog", "Poison dart frog", "Purple frog",
+        "Olm", "Chinese giant salamander", "Hellbender",
+        "Thorny devil", "Marine iguana", "Gharial",
+        "Leatherback sea turtle", "Flatback turtle",
+        "Gaboon viper", "Boomslang", "Tentacled snake",
+        "Titan arum", "Welwitschia", "Bristlecone pine",
+        "Rainbow eucalyptus", "Sandbox tree", "Manchineel",
     ],
     "crazy_humans": [
-        "Robert Wadlow", "Michel Lotito", "Lina Medina",
-        "Dean Karnazes", "Wim Hof", "Grigori Rasputin",
-        "Charles Osborne", "Kim Peek", "Daniel Tammet",
-        "Stephen Wiltshire", "Angus Barbieri", "Nicholas Alkemade",
-        "Roy Sullivan", "Tsutomu Yamaguchi", "Vesna Vulovic",
-        "Unusual deaths", "List of tallest people",
-        "List of shortest people", "Human echolocation",
-        "Feral children", "Mitsutaka Uchikoshi", "Stig Severinsen",
-        "Tim Friede", "Juliane Koepcke", "Joe Simpson",
-        "Aron Ralston", "Beck Weathers", "Phineas Gage",
-        "Alexis St. Martin", "James Harrison",
-        "Benedetto Supino", "Natasha Demkina",
-        "Erik Weihenmayer", "Hugh Herr", "Temple Grandin",
-        "Derek Paravicini", "Tony Cicoria", "Jason Padgett",
-        "Slavomir Rawicz", "Ernest Shackleton", "Louis Zamperini",
-        "Mauro Prosperi", "Yossi Ghinsberg",
-        "Anatoli Bugorski", "Harold Whittles",
+        "Stig Severinsen", "Tom Sietas", "Aleix Segura Vendrell",
+        "Wim Hof", "Dean Karnazes", "Scott Jurek",
+        "David Blaine", "Harry Houdini", "Mirin Dajo",
+        "Michel Lotito", "Edward Hagert",
+        "Natasha Demkina", "Lena Zagre",
+        "Isao Machii", "Bob Munden",
+        "Tim Cridland", "Murali", "Etibar Elchiyev",
+        "Manoj Kumar Maharana",
+        "Prahlad Jani", "Hira Ratan Manek",
+        "Slavomir Rawicz", "Hiroo Onoda", "Teruo Nakamura",
+        "Hugh Glass", "John Colter",
+        "Ada Blackjack", "Shackleton expedition",
+        "Roanoke Colony", "Kaspar Hauser",
+        "Wild Peter", "Victor of Aveyron",
+        "Genie Wiley", "Oxana Malaya",
+        "Ellen Craft", "Henry Box Brown",
+        "Harriet Tubman underground railroad",
+        "Benedikt Magnusson", "Zydrunas Savickas",
+        "Mariusz Pudzianowski", "Brian Shaw",
+        "Leonid Stadnik", "Sultan Kosen",
+        "Chandra Bahadur Dangi", "He Pingping",
+        "Mikel Ruffinelli", "Cathie Jung",
+        "Rolf Buchholz", "Lucky Diamond Rich",
+        "Elaine Davidson", "Pauly Unstoppable",
     ],
     "dark_history": [
-        "Black Death", "Unit 731", "Tanganyika laughter epidemic",
-        "Dancing plague of 1518", "Great Molasses Flood",
-        "Radium Girls", "Tulsa race massacre",
-        "MKUltra", "Operation Paperclip",
-        "Tuskegee syphilis experiment", "Stolen generations",
-        "Emu War", "Holodomor", "Srebrenica massacre",
-        "Rwandan genocide", "Triangle Shirtwaist Factory fire",
-        "Jonestown", "Heaven's Gate",
-        "Antikythera mechanism", "Voynich manuscript",
-        "Wow! signal", "Dyatlov Pass incident",
-        "Mary Celeste", "SS Ourang Medan",
-        "Sodder children", "Tamam Shud case",
-        "Lead poisoning in Rome", "Ergotism",
-        "Great Pacific garbage patch", "Aral Sea",
-        "Lobotomy", "Thalidomide", "Phrenology", "Eugenics",
-        "Project MKNaomi", "Operation Sea-Spray",
-        "Guatemalan syphilis experiments", "Willowbrook State School",
-        "Dozier School for Boys", "Goiania accident",
-        "Bhopal disaster", "Chernobyl disaster",
-        "Love Canal", "Agent Orange",
-        "Forced sterilization in the United States",
+        "Witch trials in the early modern period",
+        "Children's Crusade",
+        "Taiping Rebellion",
+        "Transatlantic slave trade",
+        "Congo Free State",
+        "Herero and Namaqua genocide",
+        "Armenian genocide",
+        "Nanking Massacre",
+        "Bataan Death March",
+        "Operation Meetinghouse",
+        "Dresden bombing",
+        "Hiroshima",
+        "Nagasaki",
+        "Atomic bombings of Hiroshima and Nagasaki",
+        "Korean War",
+        "Agent Orange",
+        "My Lai massacre",
+        "Khmer Rouge",
+        "Cambodian genocide",
+        "Ethiopian famine",
+        "Sierra Leone Civil War",
+        "Liberian Civil War",
+        "Lord's Resistance Army",
+        "Blood diamonds",
+        "Apartheid",
+        "Sharpeville massacre",
+        "Steve Biko",
+        "COINTELPRO",
+        "Iran–Contra affair",
+        "Guatemalan genocide",
+        "Operation Condor",
+        "Banana massacre",
+        "United Fruit Company",
+        "Belgian Congo",
+        "Leopold II of Belgium",
+        "Comfort women",
+        "Unit 731",
+        "Aktion T4",
+        "Holocaust trains",
+        "Sonderkommando",
+        "Sobibor extermination camp",
+        "Treblinka extermination camp",
+        "Night of the Long Knives",
+        "Kristallnacht",
+        "Majdanek concentration camp",
+        "Jasenovac concentration camp",
     ],
     "ocean_space": [
-        "Mariana Trench", "Challenger Deep", "Bioluminescence",
-        "Hydrothermal vent", "Megalodon", "Bermuda Triangle",
-        "Black hole", "Neutron star", "Magnetar",
-        "Pale Blue Dot", "Voyager 1", "Fermi paradox",
-        "Dark matter", "Dark energy", "Tunguska event",
-        "Chelyabinsk meteor", "Great Oxygenation Event",
-        "Permian-Triassic extinction event",
-        "Chicxulub crater", "Oumuamua",
-        "Dyson sphere", "Kardashev scale",
-        "Great Red Spot", "Europa", "Enceladus",
-        "Titan", "Io", "Triton",
-        "Rogue planet", "Zombie star", "Quasar",
-        "Fast radio burst", "Gravitational wave",
-        "Event Horizon Telescope", "Sagittarius A*",
-        "Cosmic web", "Observable universe",
-        "Simulation hypothesis", "Blue hole",
-        "Milky Way", "Andromeda Galaxy",
-        "Gamma-ray burst", "Cosmic microwave background",
-        "Spaghettification", "Time dilation",
-        "Wormhole", "Hawking radiation",
-        "Great Attractor", "Bloop",
-        "Zone of silence", "Underwater waterfall",
+        "Io volcanic activity",
+        "Europa ocean",
+        "Enceladus water plumes",
+        "Titan atmosphere",
+        "Pluto geology",
+        "Ceres dwarf planet",
+        "Asteroid belt",
+        "Kuiper belt",
+        "Oort cloud",
+        "Interstellar medium",
+        "Nebula",
+        "Pillars of Creation",
+        "Horsehead Nebula",
+        "Orion Nebula",
+        "Crab Nebula",
+        "Andromeda–Milky Way collision",
+        "Local Group",
+        "Virgo Supercluster",
+        "Laniakea Supercluster",
+        "Cosmic void",
+        "Boötes void",
+        "Cold spot",
+        "Big Bang nucleosynthesis",
+        "Inflation cosmology",
+        "Heat death of the universe",
+        "Big Rip",
+        "Big Crunch",
+        "White dwarf",
+        "Brown dwarf",
+        "Pulsar",
+        "Magnetar",
+        "Hypernova",
+        "Pair-instability supernova",
+        "Kilonova",
+        "Gravitational microlensing",
+        "Exoplanet",
+        "Hot Jupiter",
+        "Super-Earth",
+        "Ocean planet",
+        "Rogue planet",
+        "Circumstellar habitable zone",
+        "Panspermia",
+        "Extremophile",
+        "Thermophile",
+        "Psychrophile",
+        "Deep sea",
+        "Hadal zone",
+        "Abyssal plain",
+        "Underwater volcano",
+        "Black smoker",
+        "Methane clathrate",
+        "Brine pool",
+        "Dead zone",
+        "Sargasso Sea",
+        "Antarctic Circumpolar Current",
+        "Thermohaline circulation",
+        "Rogue wave",
+        "Tsunami",
+        "Megatsunami",
     ],
-    "world_news": [],  # handled by BBC RSS
+    "world_news": [],
     "shocking_facts": [
-        "Human microbiome", "Sleep paralysis",
-        "Exploding head syndrome", "Cotard delusion",
-        "Foreign accent syndrome", "Locked-in syndrome",
-        "Mass hysteria", "Spontaneous human combustion",
-        "Ball lightning", "Raining animals",
-        "Biological warfare", "Chemical warfare",
-        "Opium Wars", "Modern slavery",
-        "Microplastics", "Forever chemicals",
-        "Sugar industry", "Tobacco industry",
-        "Opioid epidemic", "Panama Papers",
-        "Cambridge Analytica", "Edward Snowden",
-        "Area 51", "Bilderberg Group",
-        "Food desert", "Organ trade",
-        "Deep web", "Dark web",
-        "Subliminal advertising", "Propaganda",
-        "Gaslighting", "Stockholm syndrome",
-        "Milgram experiment", "Stanford prison experiment",
-        "Bystander effect", "Dunning-Kruger effect",
-        "Placebo effect", "Nocebo effect", "False memory",
-        "Phantom limb", "Synesthesia", "Savant syndrome",
-        "Near-death experience", "Lucid dreaming",
-        "Human trafficking", "Blood diamonds", "Conflict minerals",
-        "Shadow banking", "Tax haven", "Dark money",
-        "Predictive policing", "Social credit system",
-        "Surveillance capitalism", "Filter bubble",
-        "Epigenetics", "Telomere", "CRISPR",
-        "Brain-computer interface", "Transhumanism",
-        "Factory farming", "Seed patent", "Fluoride controversy",
+        "Tarrare",
+        "Charles Domery",
+        "Pica disorder",
+        "Autophagia",
+        "Capgras delusion",
+        "Fregoli delusion",
+        "Alice in Wonderland syndrome",
+        "Reduplicative paramnesia",
+        "Alien hand syndrome",
+        "Somatoparaphrenia",
+        "Misophonia",
+        "Morgellons",
+        "Mass psychogenic illness",
+        "Dancing mania",
+        "Nodding disease",
+        "Kuru disease",
+        "Fatal familial insomnia",
+        "Prion disease",
+        "Bovine spongiform encephalopathy",
+        "Chronic wasting disease",
+        "Toxoplasma gondii",
+        "Ophiocordyceps",
+        "Zombie ant fungus",
+        "Hairworm",
+        "Cymothoa exigua",
+        "Sacculina",
+        "Jewel wasp",
+        "Glyptapanteles",
+        "Emerald cockroach wasp",
+        "Ichneumon wasp",
+        "Human experimentation in the United States",
+        "Project MKULTRA",
+        "Project Artichoke",
+        "Operation Midnight Climax",
+        "Edgewood Arsenal human experiments",
+        "Holmesburg Prison",
+        "Aversion Project",
+        "CIA drug experiments",
+        "Unethical human experimentation",
+        "Radium jaw",
+        "Phossy jaw",
+        "Cavendish banana disease",
+        "Panama disease",
+        "Colony collapse disorder",
+        "Insect decline",
+        "Dead zones in the ocean",
+        "Sixth mass extinction",
+        "Permafrost thaw",
+        "Methane bomb",
+        "Geoengineering",
+        "Solar geoengineering",
+        "HAARP",
+        "Scalar weapon",
+        "Electronic warfare",
+        "Directed-energy weapon",
+        "Neutron bomb",
+        "Cobalt bomb",
+        "Tsar Bomba",
+        "Nuclear winter",
     ],
 }
 
 # ── Post starters ─────────────────────────────────────────────────
 STARTERS = [
+    "Do you know that",
     "Did you know that",
-    "Nobody told you this but",
-    "They never told us that",
-    "This is 100% real —",
-    "Science cannot explain why",
-    "Before you sleep tonight, read this —",
-    "Only 1% of people know this —",
-    "This actually happened and it will shock you —",
-    "You will not believe this but",
-    "God created this and scientists are still confused —",
-    "This is the most shocking thing you will read today —",
-    "The world never talks about this —",
-    "Nobody is talking about this —",
-    "Meet the most dangerous thing on Earth —",
-    "This will change how you see the world —",
-    "They tried to hide this from us —",
-    "Most people go their whole life not knowing this —",
-    "This is not a movie. This is real life —",
+    "Do you know that most people have never heard of",
+    "Did you know that right now, as you read this,",
+    "Do you know that somewhere on this planet,",
+    "Did you know that for hundreds of years, people had no idea that",
+    "Do you know that scientists still cannot fully explain",
+    "Did you know that the thing you are about to read is completely real —",
+    "Do you know that there is a creature on this Earth that",
+    "Did you know that there is a true story that most schools never teach —",
+    "Do you know that somewhere deep in history,",
+    "Did you know that the world is hiding something that",
+    "Do you know that every single day, millions of people walk past the truth about",
+    "Did you know that one of the most shocking things ever discovered is",
+    "Do you know that nature created something so unbelievable that",
+    "Did you know that this actually happened and most people have no idea —",
+    "Do you know that there is a real place on Earth where",
+    "Did you know that the human body can do something that will completely shock you —",
 ]
 
 # ── Hashtags per category ─────────────────────────────────────────
@@ -208,7 +325,6 @@ HASHTAGS = {
     "shocking_facts":  "#TheyNeverToldUs #ShockingFacts #Facts #DidYouKnow #HiddenTruth #Africa",
 }
 
-# ── BBC RSS ───────────────────────────────────────────────────────
 BBC_RSS = "https://feeds.bbci.co.uk/news/rss.xml"
 
 # ── State ─────────────────────────────────────────────────────────
@@ -233,7 +349,7 @@ def save_state():
         json.dump({
             "last_post_time": last_post_time,
             "category_index": category_index,
-            "posted_keys": posted_keys,
+            "posted_keys":    posted_keys,
         }, f)
 
 def is_posted(key):
@@ -251,12 +367,12 @@ def mark_posted(key):
 def ask_groq(prompt):
     headers = {
         "Authorization": f"Bearer {GROQ_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     payload = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 900,
+        "model":       "llama-3.3-70b-versatile",
+        "messages":    [{"role": "user", "content": prompt}],
+        "max_tokens":  900,
         "temperature": 0.85,
     }
     for attempt in range(3):
@@ -270,55 +386,71 @@ def ask_groq(prompt):
         time.sleep(5)
     return None
 
-# ── Wikipedia fetch — full article extract ────────────────────────
+# ── Wikipedia fetch — full article + image ────────────────────────
 def fetch_wikipedia(topic):
     try:
-        # Use the full extract API to get much more content than the summary
-        url = (
+        api_url = (
             "https://en.wikipedia.org/w/api.php"
             "?action=query&prop=extracts&exintro=false&explaintext=true"
             "&redirects=1&format=json&titles=" + requests.utils.quote(topic)
         )
-        r = requests.get(url, headers={"User-Agent": "TheyNeverToldUs/1.0"}, timeout=15)
-        if r.status_code == 200:
-            data  = r.json()
-            pages = data.get("query", {}).get("pages", {})
-            page  = next(iter(pages.values()))
-            if "missing" in page:
-                log(f"[WIKI] Page missing: {topic}")
-                return None
-            full_text = page.get("extract", "")
+        r = requests.get(
+            api_url, headers={"User-Agent": "TheyNeverToldUs/1.0"}, timeout=15
+        )
+        if r.status_code != 200:
+            return None
 
-            # Also fetch image from summary endpoint
-            image_url = None
-            sum_url = (
-                "https://en.wikipedia.org/api/rest_v1/page/summary/"
-                + topic.replace(" ", "_")
-            )
-            sr = requests.get(
-                sum_url,
-                headers={"User-Agent": "TheyNeverToldUs/1.0"},
-                timeout=10
-            )
-            if sr.status_code == 200:
-                sdata = sr.json()
-                if "originalimage" in sdata:
-                    image_url = sdata["originalimage"]["source"]
-                elif "thumbnail" in sdata:
-                    image_url = re.sub(
-                        r'/\d+px-', '/1200px-', sdata["thumbnail"]["source"]
-                    )
+        pages = r.json().get("query", {}).get("pages", {})
+        page  = next(iter(pages.values()))
+        if "missing" in page:
+            log(f"[WIKI] Page missing: {topic}")
+            return None
+        full_text = page.get("extract", "")
 
-            return {
-                "title": page.get("title", topic),
-                "summary": full_text[:3000],  # up to 3000 chars of real content
-                "image_url": image_url,
-            }
+        # Image strategy 1 — summary API
+        image_url = None
+        sum_url = (
+            "https://en.wikipedia.org/api/rest_v1/page/summary/"
+            + requests.utils.quote(topic.replace(" ", "_"))
+        )
+        sr = requests.get(
+            sum_url, headers={"User-Agent": "TheyNeverToldUs/1.0"}, timeout=10
+        )
+        if sr.status_code == 200:
+            sd = sr.json()
+            if "originalimage" in sd:
+                image_url = sd["originalimage"]["source"]
+            elif "thumbnail" in sd:
+                image_url = re.sub(r'/\d+px-', '/1200px-', sd["thumbnail"]["source"])
+
+        # Image strategy 2 — pageimages API
+        if not image_url:
+            pi_url = (
+                "https://en.wikipedia.org/w/api.php"
+                "?action=query&prop=pageimages&pithumbsize=1200"
+                "&redirects=1&format=json&titles=" + requests.utils.quote(topic)
+            )
+            pr = requests.get(
+                pi_url, headers={"User-Agent": "TheyNeverToldUs/1.0"}, timeout=10
+            )
+            if pr.status_code == 200:
+                pp    = next(iter(pr.json().get("query", {}).get("pages", {}).values()))
+                thumb = pp.get("thumbnail", {})
+                if thumb.get("source"):
+                    image_url = thumb["source"]
+
+        log(f"[WIKI] Image {'found' if image_url else 'not found'} for: {topic}")
+        return {
+            "title":     page.get("title", topic),
+            "summary":   full_text[:3000],
+            "image_url": image_url,
+        }
+
     except Exception as e:
         log(f"[WIKI] Error fetching {topic}: {e}")
     return None
 
-# ── Download Wikipedia image ──────────────────────────────────────
+# ── Download and validate image ───────────────────────────────────
 def download_image(image_url):
     if not image_url:
         return None
@@ -326,14 +458,68 @@ def download_image(image_url):
         r = requests.get(
             image_url,
             headers={"User-Agent": "TheyNeverToldUs/1.0"},
-            timeout=20
+            timeout=20,
         )
-        if r.status_code == 200 and len(r.content) > 1000:
-            log(f"[IMAGE] Downloaded {len(r.content)//1024}KB")
-            return r.content
-        log(f"[IMAGE] Failed: {r.status_code}")
+        if r.status_code != 200:
+            log(f"[IMAGE] HTTP {r.status_code}")
+            return None
+        content_type = r.headers.get("Content-Type", "")
+        if "svg" in content_type.lower() or image_url.lower().endswith(".svg"):
+            log("[IMAGE] Rejected SVG")
+            return None
+        if len(r.content) < 5000:
+            log(f"[IMAGE] Too small ({len(r.content)} bytes)")
+            return None
+        log(f"[IMAGE] Downloaded {len(r.content)//1024}KB")
+        return r.content
     except Exception as e:
         log(f"[IMAGE] Exception: {e}")
+    return None
+
+# ── Pexels image fallback ─────────────────────────────────────────
+def fetch_pexels_image(query, category):
+    def _search(q):
+        try:
+            r = requests.get(
+                PEXELS_URL,
+                headers={"Authorization": PEXELS_KEY},
+                params={"query": q, "per_page": 15, "orientation": "landscape"},
+                timeout=15,
+            )
+            if r.status_code != 200:
+                log(f"[PEXELS] HTTP {r.status_code} for: {q}")
+                return None
+            photos = r.json().get("photos", [])
+            if not photos:
+                return None
+            photo = random.choice(photos[:10])
+            return photo.get("src", {}).get("large2x") or photo.get("src", {}).get("original")
+        except Exception as e:
+            log(f"[PEXELS] Exception for '{q}': {e}")
+            return None
+
+    url = _search(query)
+    if not url:
+        fallback = PEXELS_CATEGORY_FALLBACK.get(category, "nature")
+        log(f"[PEXELS] No result for '{query}', trying fallback: '{fallback}'")
+        url = _search(fallback)
+    if not url:
+        log("[PEXELS] No image found")
+        return None
+    return download_image(url)
+
+# ── Get image: Wikipedia first, Pexels fallback ───────────────────
+def get_image(wiki_image_url, topic, category):
+    img = download_image(wiki_image_url)
+    if img:
+        log("[IMAGE] Using Wikipedia image")
+        return img
+    log(f"[IMAGE] Wikipedia failed, trying Pexels for: {topic}")
+    img = fetch_pexels_image(topic, category)
+    if img:
+        log("[IMAGE] Using Pexels image")
+        return img
+    log(f"[IMAGE] No image found for: {topic}")
     return None
 
 # ── BBC RSS fetch ─────────────────────────────────────────────────
@@ -365,23 +551,23 @@ def post_to_facebook(message, image_bytes=None):
                 FB_PHOTO_URL,
                 files={"source": ("image.jpg", image_bytes, "image/jpeg")},
                 data={"caption": message, "access_token": FB_TOKEN},
-                timeout=30
+                timeout=30,
             )
         else:
             r = requests.post(
                 FB_POST_URL,
                 data={"message": message, "access_token": FB_TOKEN},
-                timeout=15
+                timeout=15,
             )
         if r.status_code == 200:
-            log(f"[POSTED] {message[:80]}...")
+            log(f"[POSTED] {'with image' if image_bytes else 'text only'} — {message[:80]}...")
             return True
         log(f"[FB ERROR] {r.status_code} {r.text[:300]}")
     except Exception as e:
         log(f"[FB ERROR] {e}")
     return False
 
-# ── Write fact post with Groq ─────────────────────────────────────
+# ── Write fact post ───────────────────────────────────────────────
 def write_fact_post(category, topic, wiki_data):
     info    = CATEGORY_INFO[category]
     emoji   = info["emoji"]
@@ -390,53 +576,52 @@ def write_fact_post(category, topic, wiki_data):
 
     prompt = f"""You are a master storyteller writing for a Facebook page called "They Never Told Us". Your audience is mostly African people who love shocking, real stories told in simple English.
 
-You have been given a large amount of real facts about {topic}. Your job is to pick the most shocking, surprising and interesting facts from this text and turn them into a gripping story. The reader must feel like they are learning something real and powerful that nobody ever told them.
+You have been given real facts about {topic}. Pick the most shocking, surprising and specific facts and turn them into a gripping story that feels like a wise friend whispering something incredible into your ear.
 
 REAL FACTS ABOUT {topic.upper()}:
 {summary}
 
-Now write the Facebook post following these instructions carefully:
+Write the Facebook post following these instructions:
 
-OPENING LINE: Start with "{starter}" then immediately give the single most shocking or surprising specific fact about {topic} — use a real number, size, speed, record, or event from the text above. Add {emoji} at the end of this line. This line must make someone stop scrolling immediately.
+OPENING LINE: Start with "{starter}" then immediately give the single most shocking or surprising specific fact about {topic} — use a real number, size, speed, record, or event from the text above. Add {emoji} at the end of this line. This line must stop someone mid-scroll.
 
-THE STORY: Write 4 to 5 sentences that tell the story of {topic} in a flowing, connected way. Each sentence must introduce a NEW fact — never repeat or rephrase what was already said. Pull specific details from the text — numbers, sizes, comparisons, records, events, behaviours, discoveries. Connect the sentences naturally so the story builds. Write like a friend who just discovered something incredible and cannot stop talking about it.
+THE STORY: Write 4 to 5 sentences flowing naturally into each other like one connected story. Each sentence must introduce a completely NEW fact — never repeat or rephrase anything. Pull specific details — exact numbers, sizes, comparisons, records, events, behaviours, discoveries. Write like someone who cannot stop sharing the most incredible thing they just discovered.
 
-THE CLOSER: One final sentence that leaves the reader amazed, unsettled or grateful. Make them feel the weight of what they just read.
+THE CLOSER: One final sentence that leaves the reader amazed, unsettled or deeply grateful. No emoji. Make it land hard.
 
 CALL TO ACTION — write exactly this on a new line:
 🔔 Follow They Never Told Us — we post the craziest facts every single day.
 Tag a friend who needs to see this 👇
 
-STRICT RULES — follow every single one:
+STRICT RULES:
 - Total length: 200 to 260 words
-- Simple English only — anyone must understand it
-- Maximum 2 emojis in the entire post — only the one on the opening line counts, one more anywhere feels natural
-- Zero bullet points, zero dashes, zero lists, zero numbered lines
-- Zero titles, zero headings, zero section labels
-- Every sentence must be different and add NEW information
-- Never use filler phrases like "what makes this interesting", "the crazy thing is", "here is what nobody tells you" more than once — vary your language
-- Never repeat the same idea in different words
+- Simple English only — a 13 year old must understand every word
+- Maximum 2 emojis in the entire post
+- No bullet points, no dashes, no numbered lines, no lists
+- No titles, no headings, no section labels
+- Every sentence must introduce NEW information — never repeat the same idea
 - Only use facts from the text above — do not invent anything
+- The opening starter must connect naturally and grammatically to the sentence
 """
     result = ask_groq(prompt)
     if result:
         return result + f"\n\n{HASHTAGS[category]}"
     return None
 
-# ── Write news post with Groq ─────────────────────────────────────
+# ── Write news post ───────────────────────────────────────────────
 def write_news_post(title, desc):
     starter = random.choice(STARTERS)
 
-    prompt = f"""You are a master storyteller writing for a Facebook page called "They Never Told Us". Your audience is mostly African people. You write like a smart friend who explains the news in a gripping, clear and human way.
+    prompt = f"""You are a master storyteller writing for a Facebook page called "They Never Told Us". Your audience is mostly African people. You write like a smart friend explaining important news in a gripping, clear and human way.
 
 REAL NEWS HEADLINE: {title}
 REAL NEWS DETAILS: {desc}
 
-Write a Facebook post that reads like a short powerful story. Every sentence must add new information. Never repeat or rephrase what was already said.
+Write a Facebook post that reads like a short powerful story. Every sentence must add completely new information.
 
-OPENING LINE: Start with "{starter}" then give the most shocking or important specific fact from this news story. Add 🌍 at the end of this line. Make it impossible to stop reading.
+OPENING LINE: Start with "{starter}" then give the most shocking or important specific fact from this news. Add 🌍 at the end of this line. Make it impossible to stop reading.
 
-THE STORY: Write 4 to 5 sentences explaining what happened, why it happened, who is affected, and why it matters for Africa and ordinary people around the world. Each sentence must introduce something new. Connect them naturally so the reader feels the full picture building in front of them.
+THE STORY: Write 4 to 5 sentences explaining what happened, why it happened, who is affected, and why it matters for Africa and ordinary people. Each sentence must be completely new. Connect them naturally so the reader feels the full picture building.
 
 THE CLOSER: One final powerful sentence about what this means or what might happen next. No emoji. Just weight.
 
@@ -444,15 +629,15 @@ CALL TO ACTION — write exactly this on a new line:
 🔔 Follow They Never Told Us — we explain world news in simple English every single day.
 Tag someone who needs to understand what is happening 👇
 
-STRICT RULES — follow every single one:
+STRICT RULES:
 - Total length: 200 to 260 words
-- Simple English only — anyone must understand it
+- Simple English only — a 13 year old must understand every word
 - Maximum 2 emojis in the entire post
-- Zero bullet points, zero dashes, zero lists, zero numbered lines
-- Zero titles, zero headings, zero section labels
-- Every sentence must be different and add NEW information
-- Never repeat the same idea in different words
+- No bullet points, no dashes, no numbered lines, no lists
+- No titles, no headings, no section labels
+- Every sentence must introduce NEW information
 - Only use facts from the headline and details above — do not invent anything
+- The opening starter must connect naturally and grammatically to the sentence
 """
     result = ask_groq(prompt)
     if result:
@@ -478,8 +663,9 @@ def make_post():
             key = re.sub(r'[^a-z0-9]', '', item["title"].lower())[:60]
             if not is_posted(key):
                 log(f"[BOT] News: {item['title'][:60]}")
-                post_text = write_news_post(item["title"], item["desc"])
-                post_key  = key
+                post_text   = write_news_post(item["title"], item["desc"])
+                image_bytes = fetch_pexels_image(item["title"][:50], category)
+                post_key    = key
                 break
 
         if not post_key:
@@ -498,7 +684,7 @@ def make_post():
                 wiki_data = fetch_wikipedia(topic)
                 if wiki_data and len(wiki_data["summary"]) > 200:
                     post_text   = write_fact_post(category, topic, wiki_data)
-                    image_bytes = download_image(wiki_data.get("image_url"))
+                    image_bytes = get_image(wiki_data.get("image_url"), topic, category)
                     post_key    = key
                     break
 
@@ -535,9 +721,9 @@ def run():
     log("=" * 50)
     log(f"Categories : {', '.join(CATEGORY_INFO[c]['name'] for c in CATEGORIES)}")
     log("Sources    : Wikipedia full extract + BBC RSS")
-    log("Writing    : Groq AI (llama-3.3-70b) — story style, real facts, no filler")
-    log("Images     : Wikipedia original photos")
-    log("Interval   : Every 30 minutes")
+    log("Images     : Wikipedia → Pexels fallback")
+    log("Writing    : Groq AI llama-3.3-70b — story style, real facts")
+    log("Interval   : Every 1 hour")
     log("No repeats : 30 day cooldown per topic")
     log("")
 
