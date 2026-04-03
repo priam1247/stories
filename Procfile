@@ -1,1 +1,1 @@
-web: python run.py
+worker: python cinevault_bot.py

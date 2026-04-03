@@ -1,0 +1,30 @@
+2026-04-03 12:04:07  INFO      ✅  Config validated — all credentials loaded from .env
+2026-04-03 12:04:14  INFO      ✅  Token valid — connected as: They Never Told Us
+2026-04-03 12:04:27  INFO      Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-03 12:04:27  INFO        ⏰  Scheduled post at  07:00
+2026-04-03 12:04:27  INFO      Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-03 12:04:27  INFO        ⏰  Scheduled post at  09:00
+2026-04-03 12:04:27  INFO      Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-03 12:04:27  INFO        ⏰  Scheduled post at  11:00
+2026-04-03 12:04:27  INFO      Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-03 12:04:27  INFO        ⏰  Scheduled post at  13:00
+2026-04-03 12:04:27  INFO      Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-03 12:04:27  INFO        ⏰  Scheduled post at  15:00
+2026-04-03 12:04:27  INFO      Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-03 12:04:27  INFO        ⏰  Scheduled post at  17:00
+2026-04-03 12:04:28  INFO      Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-03 12:04:28  INFO        ⏰  Scheduled post at  19:00
+2026-04-03 12:04:28  INFO      Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-04-03 12:04:28  INFO        ⏰  Scheduled post at  21:00
+2026-04-03 12:04:28  INFO      
+  🚀  Bot is live — waiting for next scheduled post...
+
+2026-04-03 12:04:28  INFO      Added job "run_post" to job store "default"
+2026-04-03 12:04:28  INFO      Added job "run_post" to job store "default"
+2026-04-03 12:04:28  INFO      Added job "run_post" to job store "default"
+2026-04-03 12:04:28  INFO      Added job "run_post" to job store "default"
+2026-04-03 12:04:28  INFO      Added job "run_post" to job store "default"
+2026-04-03 12:04:28  INFO      Added job "run_post" to job store "default"
+2026-04-03 12:04:28  INFO      Added job "run_post" to job store "default"
+2026-04-03 12:04:28  INFO      Added job "run_post" to job store "default"
+2026-04-03 12:04:28  INFO      Scheduler started

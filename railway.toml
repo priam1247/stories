@@ -1,0 +1,6 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python cinevault_bot.py"
+restartPolicyType = "always"
